@@ -1,4 +1,8 @@
 {
+  "buildCommand": "npm run build:client",
+  "outputDirectory": "public",
+  "installCommand": "npm install",
+  "framework": null,
   "rewrites": [
     {
       "source": "/(.*)",
