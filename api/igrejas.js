@@ -1,26 +1,6 @@
-const Database = require('better-sqlite3');
-const path = require('path');
-
-const dbPath = path.join('/tmp', 'db.sqlite');
-let db;
-
-try {
-  db = new Database(dbPath);
-  
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS igrejas (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      nome TEXT NOT NULL,
-      endereco TEXT,
-      presidente TEXT,
-      coordenador_area TEXT,
-      coordenadora_ir TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-} catch (error) {
-  console.error('Erro ao inicializar DB:', error);
-}
+// Simulação de banco de dados em memória (temporário para testes)
+let igrejas = [];
+let nextId = 1;
 
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -33,38 +13,37 @@ module.exports = async (req, res) => {
 
   try {
     if (req.method === 'GET') {
-      const igrejas = db.prepare('SELECT * FROM igrejas ORDER BY nome').all();
       return res.status(200).json(igrejas);
     }
 
     if (req.method === 'POST') {
       const { nome, endereco, presidente, coordenador_area, coordenadora_ir } = req.body;
-      
-      const result = db.prepare(`
-        INSERT INTO igrejas (nome, endereco, presidente, coordenador_area, coordenadora_ir)
-        VALUES (?, ?, ?, ?, ?)
-      `).run(nome, endereco, presidente, coordenador_area, coordenadora_ir);
-      
-      const igreja = db.prepare('SELECT * FROM igrejas WHERE id = ?').get(result.lastInsertRowid);
+      const igreja = {
+        id: nextId++,
+        nome,
+        endereco,
+        presidente,
+        coordenador_area,
+        coordenadora_ir,
+        created_at: new Date().toISOString()
+      };
+      igrejas.push(igreja);
       return res.status(201).json(igreja);
     }
 
     if (req.method === 'PUT') {
       const { id, nome, endereco, presidente, coordenador_area, coordenadora_ir } = req.body;
-      
-      db.prepare(`
-        UPDATE igrejas 
-        SET nome = ?, endereco = ?, presidente = ?, coordenador_area = ?, coordenadora_ir = ?
-        WHERE id = ?
-      `).run(nome, endereco, presidente, coordenador_area, coordenadora_ir, id);
-      
-      const igreja = db.prepare('SELECT * FROM igrejas WHERE id = ?').get(id);
-      return res.status(200).json(igreja);
+      const index = igrejas.findIndex(i => i.id === id);
+      if (index !== -1) {
+        igrejas[index] = { ...igrejas[index], nome, endereco, presidente, coordenador_area, coordenadora_ir };
+        return res.status(200).json(igrejas[index]);
+      }
+      return res.status(404).json({ error: 'Igreja não encontrada' });
     }
 
     if (req.method === 'DELETE') {
       const { id } = req.body;
-      db.prepare('DELETE FROM igrejas WHERE id = ?').run(id);
+      igrejas = igrejas.filter(i => i.id !== id);
       return res.status(204).end();
     }
 
