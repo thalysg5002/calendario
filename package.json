@@ -32,8 +32,7 @@
   "scripts": {
     "dev": "vite",
     "build": "npm run build:client && npm run build:server",
-  "postbuild": "node scripts/copy-dist.cjs",
-  "build:client": "vite build && node scripts/copy-dist.cjs",
+    "build:client": "vite build",
     "build:server": "vite build --config vite.config.server.ts",
     "start": "node dist/server/node-build.mjs",
     "test": "vitest --run",
