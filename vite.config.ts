@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
-    outDir: "public",
+    outDir: "dist",
   },
   plugins: [react(), expressPlugin()],
   resolve: {
