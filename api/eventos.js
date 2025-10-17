@@ -1,9 +1,8 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import Database from 'better-sqlite3';
-import path from 'path';
+const Database = require('better-sqlite3');
+const path = require('path');
 
-const dbPath = path.join('/tmp', 'db.json');
-let db: any;
+const dbPath = path.join('/tmp', 'db.sqlite');
+let db;
 
 try {
   db = new Database(dbPath);
@@ -24,7 +23,7 @@ try {
   console.error('Erro ao inicializar DB:', error);
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -76,8 +75,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     return res.status(405).json({ error: 'Method not allowed' });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Erro na API eventos:', error);
     return res.status(500).json({ error: error.message });
   }
-}
+};
