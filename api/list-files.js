@@ -1,5 +1,5 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
 function listDir(dir) {
   try {
@@ -10,7 +10,7 @@ function listDir(dir) {
   }
 }
 
-module.exports = (req, res) => {
+export default (req, res) => {
   const cwd = process.cwd();
   const publicDir = path.join(cwd, 'public');
   const distSpa = path.join(cwd, 'dist', 'spa');

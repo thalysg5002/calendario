@@ -44,6 +44,18 @@ export function AniversariantesLista({ mesAtual }: AniversariantesListaProps) {
     carregarAniversarios();
   }, []);
 
+  useEffect(() => {
+    const handler = () => {
+      carregarAniversarios();
+    };
+    try {
+      window.addEventListener('aniversariosUpdated', handler as EventListener);
+    } catch (e) {}
+    return () => {
+      try { window.removeEventListener('aniversariosUpdated', handler as EventListener); } catch (e) {}
+    };
+  }, []);
+
   const aniversariosDoMes = mesAtual 
     ? aniversarios.filter(a => a.mes === mesAtual)
     : aniversarios;

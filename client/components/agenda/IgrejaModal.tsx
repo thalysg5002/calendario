@@ -36,22 +36,27 @@ export function IgrejaModal({
 
   // Preencher dados quando estiver editando
   useEffect(() => {
-    console.log('[DEBUG] IgrejaModal - igreja recebida:', igreja);
-    if (igreja) {
-      console.log('[DEBUG] Preenchendo campos:', { nome: igreja.nome, endereco: igreja.endereco, cor: igreja.codigoCor });
-      setNome(igreja.nome);
-      setEndereco(igreja.endereco || "");
-      setCodigoCor(igreja.codigoCor || "#16a34a");
-      setOrgaos(igreja.orgaos?.map(o => o.nome) || []);
-    } else {
-      console.log('[DEBUG] Limpando campos para nova igreja');
-      setNome("");
-      setEndereco("");
-      setCodigoCor(gerarCorAleatoria()); // Cor aleatória para novas igrejas
-      setOrgaos([]);
+    if (aberto) {
+      if (igreja) {
+        setNome(igreja.nome);
+        setEndereco(igreja.endereco || "");
+        setCodigoCor(igreja.codigoCor || "#16a34a");
+        // igreja.orgaos pode conter objetos ou strings ou até valores nulos — normalizar para array de nomes
+        const orgs = (igreja.orgaos || []).map((o: any) => {
+          if (!o) return '';
+          if (typeof o === 'string') return o;
+          return (o && o.nome) ? o.nome : String(o);
+        }).filter((s: string) => s && s.trim() !== '');
+        setOrgaos(orgs);
+      } else {
+        setNome("");
+        setEndereco("");
+        setCodigoCor(gerarCorAleatoria());
+        setOrgaos([]);
+      }
+      setErro(null);
+      setNovoOrgao("");
     }
-    setErro(null);
-    setNovoOrgao("");
   }, [igreja, aberto]);
 
   function adicionarOrgao() {

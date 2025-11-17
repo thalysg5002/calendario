@@ -1,19 +1,10 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge } = require('electron');
 
-// Expõe API segura para o renderer process
+// Expor APIs seguras para o renderer se necessário
 contextBridge.exposeInMainWorld('electron', {
-  // Informações da aplicação
-  getVersion: () => ipcRenderer.invoke('app:get-version'),
-  getPath: (name) => ipcRenderer.invoke('app:get-path', name),
-  
-  // Diálogos
-  showOpenDialog: (options) => ipcRenderer.invoke('app:show-open-dialog', options),
-  showSaveDialog: (options) => ipcRenderer.invoke('app:show-save-dialog', options),
-  
-  // Flag para indicar que está rodando no Electron
-  isElectron: true,
-  platform: process.platform
+  versions: {
+    node: process.versions.node,
+    chrome: process.versions.chrome,
+    electron: process.versions.electron
+  }
 });
-
-// Log para confirmar que o preload foi carregado
-console.log('Preload script (cjs) carregado com sucesso');

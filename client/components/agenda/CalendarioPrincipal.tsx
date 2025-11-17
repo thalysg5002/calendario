@@ -12,7 +12,9 @@ import { AniversarioModal } from "./AniversarioModal";
 import { LembretesAniversarios } from "./LembretesAniversarios";
 import { ExportarCalendarioPDF } from "./ExportarCalendarioPDF";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { FileDown } from "lucide-react";
+import { FileDown, Plus, Download, Upload } from "lucide-react";
+import { exportAllData, importData } from "@/lib/local-storage";
+import { useToast } from "@/hooks/use-toast";
 
 type EventResource = { kind: 'evento'; data: Evento } | { kind: 'aniversario'; nome: string };
 
@@ -27,6 +29,7 @@ const localizer = dateFnsLocalizer({
 
 export default function CalendarioPrincipal() {
   const { usuario } = useAuth();
+  const { toast } = useToast();
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [igrejas, setIgrejas] = useState<Igreja[]>([]);
   const [modalAberto, setModalAberto] = useState(false);
@@ -47,6 +50,7 @@ export default function CalendarioPrincipal() {
   const [aniversariosAno, setAniversariosAno] = useState<Record<number, AniversarianteOcorrencia[]>>({});
 
   const calendarioRef = useRef<HTMLDivElement>(null);
+  const inputArquivoRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     api.listarIgrejas().then((igs) => {
@@ -54,6 +58,34 @@ export default function CalendarioPrincipal() {
       setIgrejas(igs.filter(i => i.nome !== "Igreja Central" && i.nome !== "Igreja Jardim"));
     });
   }, []);
+
+  // Escutar atualizações vindas do storage-api para recarregar dados automaticamente
+  useEffect(() => {
+    const onIgrejasUpdated = async (e: any) => {
+      const igs = await api.listarIgrejas();
+      setIgrejas(igs.filter(i => i.nome !== "Igreja Central" && i.nome !== "Igreja Jardim"));
+      // Recarregar também os eventos para garantir que cores/atributos atualizados apareçam
+      await carregarEventos();
+    };
+
+    const onEventosUpdated = async (e: any) => {
+      await carregarEventos();
+    };
+
+    try {
+      window.addEventListener('igrejasUpdated', onIgrejasUpdated as EventListener);
+      window.addEventListener('eventosUpdated', onEventosUpdated as EventListener);
+    } catch (err) {
+      // ambiente pode não ser browser durante alguns testes
+    }
+
+    return () => {
+      try {
+        window.removeEventListener('igrejasUpdated', onIgrejasUpdated as EventListener);
+        window.removeEventListener('eventosUpdated', onEventosUpdated as EventListener);
+      } catch (err) { }
+    };
+  }, [intervalo.inicio.getTime(), intervalo.fim.getTime()]);
 
   async function carregarEventos(i?: Date, f?: Date) {
     const ini = (i ?? intervalo.inicio).toISOString();
@@ -87,8 +119,8 @@ export default function CalendarioPrincipal() {
     id: e.id,
     // evitar tooltip nativo do browser: não definir title aqui
     title: undefined,
-    start: new Date(e.dataHoraInicio),
-    end: new Date(e.dataHoraFim),
+    start: new Date((e as any).dataHoraInicio || (e as any).data_inicio),
+    end: new Date((e as any).dataHoraFim || (e as any).data_fim),
     allDay: Boolean(e.diaInteiro),
     resource: { kind: 'evento', data: e } as EventResource,
   })), [eventos]);
@@ -113,7 +145,8 @@ export default function CalendarioPrincipal() {
   const maxEventosEmUmDia = useMemo(() => {
     const mapa = new Map<string, number>();
     for (const e of eventos) {
-      const d = startOfDay(new Date(e.dataHoraInicio));
+      const d = startOfDay(new Date((e as any).dataHoraInicio || (e as any).data_inicio));
+      if (isNaN(d.getTime())) continue;
       const chave = d.toISOString().slice(0, 10);
       mapa.set(chave, (mapa.get(chave) || 0) + 1);
     }
@@ -127,8 +160,8 @@ export default function CalendarioPrincipal() {
       return { style: { backgroundColor: '#f97316', borderRadius: 12, color: "white", border: "1px solid rgba(255,255,255,.35)", boxShadow: "0 8px 24px rgba(0,0,0,.15)" } };
     }
     const ev = res.data;
-    const igreja = igrejas.find((i) => i.id === ev.igrejaId);
-    const cor = igreja?.codigoCor || "#16a34a";
+    const igreja = igrejas.find((i) => String(i.id) === String((ev as any).igrejaId ?? (ev as any).igreja_id));
+    const cor = (ev as any).codigoCor || igreja?.codigoCor || "#16a34a";
     return { style: { backgroundColor: cor, backgroundImage: "linear-gradient(to bottom, rgba(255,255,255,.18), rgba(0,0,0,.06))", borderRadius: 12, color: "white", border: "1px solid rgba(255,255,255,.35)", boxShadow: "0 8px 24px rgba(0,0,0,.15)" } };
   };
 
@@ -149,6 +182,9 @@ export default function CalendarioPrincipal() {
 
   async function aoSalvar() {
     await carregarEventos();
+    // Recarregar igrejas (para pegar cores/orgaos recém-criados)
+    const igs = await api.listarIgrejas();
+    setIgrejas(igs.filter(i => i.nome !== "Igreja Central" && i.nome !== "Igreja Jardim"));
     // Recarregar aniversários do mês
     const mes = intervalo.inicio.getMonth() + 1;
     api.aniversariosPorMes(mes).then(setAniversariosMes);
@@ -193,18 +229,109 @@ export default function CalendarioPrincipal() {
     }
   }
 
+  // Exportar dados
+  function handleExportarDados() {
+    try {
+      exportAllData();
+      toast({
+        title: "Dados exportados!",
+        description: "Seus dados foram exportados com sucesso.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao exportar",
+        description: "Não foi possível exportar os dados.",
+        variant: "destructive",
+      });
+    }
+  }
+
+  // Importar dados
+  function handleImportarDados() {
+    inputArquivoRef.current?.click();
+  }
+
+  async function handleArquivoSelecionado(e: React.ChangeEvent<HTMLInputElement>) {
+    const arquivo = e.target.files?.[0];
+    if (!arquivo) return;
+
+    try {
+      await importData(arquivo);
+      toast({
+        title: "Dados importados!",
+        description: "Seus dados foram importados com sucesso.",
+      });
+      
+      // Recarregar todos os dados
+      const igs = await api.listarIgrejas();
+      setIgrejas(igs.filter(i => i.nome !== "Igreja Central" && i.nome !== "Igreja Jardim"));
+      await carregarEventos();
+      const mes = intervalo.inicio.getMonth() + 1;
+      const aniv = await api.aniversariosPorMes(mes);
+      setAniversariosMes(aniv);
+      
+      if (modo === 'anual') {
+        const mapa: Record<number, AniversarianteOcorrencia[]> = {};
+        for (let m = 1; m <= 12; m++) {
+          mapa[m] = await api.aniversariosPorMes(m);
+        }
+        setAniversariosAno(mapa);
+      }
+    } catch (error) {
+      toast({
+        title: "Erro ao importar",
+        description: "Não foi possível importar os dados. Verifique o arquivo.",
+        variant: "destructive",
+      });
+    }
+
+    // Limpar input
+    e.target.value = '';
+  }
+
   return (
   <div className="space-y-4 fade-in">
+      <input 
+        ref={inputArquivoRef}
+        type="file"
+        accept=".json"
+        onChange={handleArquivoSelecionado}
+        className="hidden"
+      />
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
         <div className="space-y-0.5">
           <h1 className="text-2xl font-semibold tracking-tight">{titulo}</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button onClick={handleExportarDados} className="btn-premium bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800">
+                <Download className="h-4 w-4 mr-2 inline" />
+                Exportar Dados
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Exportar todos os dados (igrejas, eventos, aniversários)</p>
+            </TooltipContent>
+          </Tooltip>
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button onClick={handleImportarDados} className="btn-premium bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800">
+                <Upload className="h-4 w-4 mr-2 inline" />
+                Importar Dados
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Importar dados de um arquivo JSON</p>
+            </TooltipContent>
+          </Tooltip>
+          
           <button onClick={() => setModalExportarPDF(true)} className="btn-premium bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800">
             <FileDown className="h-4 w-4 mr-2 inline" />
             Exportar PDF
           </button>
-          <button onClick={() => setModalIgreja(true)} className="btn-premium">Nova Igreja</button>
+          {/* botão 'Nova Igreja' removido — usar o + ao lado do título 'Igrejas' */}
           <>
             <button onClick={() => abrirCriacaoNaData(new Date())} className="btn-premium">Adicionar Atividade</button>
             <button onClick={() => setModalAniversario(true)} className="btn-premium">Adicionar Aniversário</button>
@@ -267,8 +394,11 @@ export default function CalendarioPrincipal() {
             igrejas={igrejas} 
             onRecarregar={() => api.listarIgrejas().then(setIgrejas)}
             podeEditar={true}
+            onNovaIgreja={() => {
+              setIgrejaEdicao(null);
+              setModalIgreja(true);
+            }}
             onEditarIgreja={(igreja) => {
-              console.log('[DEBUG] CalendarioPrincipal - editando igreja:', igreja);
               setIgrejaEdicao(igreja);
               setModalIgreja(true);
             }}
@@ -319,15 +449,15 @@ function ItemCalendario({ event, igrejas }: { event: any; igrejas: Igreja[] }) {
     );
   }
   const ev = res.data;
-  const igreja = igrejas.find((i) => i.id === ev.igrejaId);
-  const cor = igreja?.codigoCor || '#16a34a';
-  const horaIni = format(new Date(ev.dataHoraInicio), 'HH:mm');
-  const horaFim = format(new Date(ev.dataHoraFim), 'HH:mm');
+  const igreja = igrejas.find((i) => String(i.id) === String((ev as any).igrejaId ?? (ev as any).igreja_id));
+  const cor = (ev as any).codigoCor || igreja?.codigoCor || '#16a34a';
+  const horaIni = format(new Date((ev as any).dataHoraInicio || (ev as any).data_inicio), 'HH:mm');
+  const horaFim = format(new Date((ev as any).dataHoraFim || (ev as any).data_fim), 'HH:mm');
   const horarioComIgreja = igreja?.nome ? `${horaIni}–${horaFim} - ${igreja.nome}` : `${horaIni}–${horaFim}`;
   
   // Buscar departamento ou órgão vinculado
-  const departamento = ev.departamentoId && igreja?.departamentos?.find(d => d.id === ev.departamentoId);
-  const orgao = ev.orgaoId && igreja?.orgaos?.find(o => o.id === ev.orgaoId);
+  const departamento = ev.departamentoId && igreja?.departamentos?.find(d => String(d.id) === String(ev.departamentoId));
+  const orgao = ev.orgaoId && igreja?.orgaos?.find(o => String(o.id) === String(ev.orgaoId));
   
   return (
     <Tooltip>
@@ -400,11 +530,12 @@ function AniversariantesWidget({ listaMes, mostrarApenasAniversarios, onToggle }
   );
 }
 
-function Igrejas({ igrejas, onRecarregar, podeEditar, onEditarIgreja }: { 
+function Igrejas({ igrejas, onRecarregar, podeEditar, onEditarIgreja, onNovaIgreja }: { 
   igrejas: Igreja[];
   onRecarregar?: () => void;
   podeEditar?: boolean;
   onEditarIgreja?: (igreja: Igreja) => void;
+  onNovaIgreja?: () => void;
 }) {
   async function editarIgreja(igreja: Igreja) {
     if (!podeEditar) return;
@@ -437,7 +568,18 @@ function Igrejas({ igrejas, onRecarregar, podeEditar, onEditarIgreja }: {
 
   return (
     <div className="rounded-2xl border border-border bg-card/90 p-4 shadow-lg ring-1 ring-black/5">
-  <h3 className="font-medium mb-2">Igrejas</h3>
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="font-medium">Igrejas</h3>
+        {podeEditar && (
+          <button
+            onClick={() => onNovaIgreja?.()}
+            className="p-1 rounded-lg hover:bg-primary/20 transition-colors"
+            title="Nova Igreja"
+          >
+            <Plus className="h-5 w-5 text-primary" />
+          </button>
+        )}
+      </div>
       <ul className="space-y-2 text-sm">
         {igrejas.map((i) => (
           <li key={i.id} className="flex items-center gap-2 group">
@@ -520,7 +662,7 @@ function MiniMes({ ano, mes, eventos, igrejas, aniversarios, mostrarApenasAniver
                     {items.slice(0,3).map((tipo, idx) => {
                       if (tipo === 'ev') {
                         const ev = doDiaEventos[idx] || doDiaEventos[doDiaEventos.length-1];
-                        const cor = ev ? (igrejas.find((i)=> i.id === ev.igrejaId)?.codigoCor || '#16a34a') : '#16a34a';
+                        const cor = ev ? (igrejas.find((i)=> String(i.id) === String((ev as any).igrejaId ?? (ev as any).igreja_id))?.codigoCor || '#16a34a') : '#16a34a';
                         return <div key={`ev-${idx}`} className="h-1.5 rounded-full" style={{ backgroundColor: cor }} />;
                       }
                       return <div key={`bd-${idx}`} className="h-1.5 rounded-full" style={{ backgroundColor: '#f97316' }} />;
@@ -534,9 +676,9 @@ function MiniMes({ ano, mes, eventos, igrejas, aniversarios, mostrarApenasAniver
                   <div className="text-xs font-medium mb-1">{format(d,'dd/MM')}</div>
                   <ul className="text-xs space-y-1">
                     {doDiaEventos.map((ev) => {
-                      const igr = igrejas.find((i)=> i.id === ev.igrejaId);
-                      const dep = ev.departamentoId && igr?.departamentos?.find(d => d.id === ev.departamentoId);
-                      const org = ev.orgaoId && igr?.orgaos?.find(o => o.id === ev.orgaoId);
+                        const igr = igrejas.find((i)=> String(i.id) === String((ev as any).igrejaId ?? (ev as any).igreja_id));
+                      const dep = ev.departamentoId && igr?.departamentos?.find(d => String(d.id) === String(ev.departamentoId));
+                      const org = ev.orgaoId && igr?.orgaos?.find(o => String(o.id) === String(ev.orgaoId));
                       return (
                         <li key={ev.id}>
                           <span className="inline-block h-2 w-2 rounded-full mr-1 align-middle" style={{ backgroundColor: igr?.codigoCor || '#16a34a' }} />

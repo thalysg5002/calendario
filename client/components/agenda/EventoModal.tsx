@@ -46,21 +46,23 @@ export function EventoModal({ aberto, onFechar, evento, dataInicial, onSalvo }: 
     if (evento) {
       setTitulo(evento.titulo || "");
       setDescricao(evento.descricao || "");
-        setResponsavel(evento.responsavel || "");
-      setInicio(evento.dataHoraInicio.substring(0, 16));
-      setFim(evento.dataHoraFim.substring(0, 16));
-      setIgrejaId(evento.igrejaId);
-      setRecursoId(evento.recursoId || "");
-      setDiaInteiro(Boolean(evento.diaInteiro));
+        setResponsavel((evento as any).responsavel || "");
+      setInicio((evento as any).dataHoraInicio?.substring(0, 16) || (evento as any).data_inicio?.substring(0,16) || "");
+      setFim((evento as any).dataHoraFim?.substring(0, 16) || (evento as any).data_fim?.substring(0,16) || "");
+      setIgrejaId(String((evento as any).igrejaId ?? (evento as any).igreja_id ?? ""));
+      setRecursoId((evento as any).recursoId || "");
+      setDiaInteiro(Boolean((evento as any).diaInteiro));
       
-      // Configurar tipo de vínculo e IDs
-      if (evento.departamentoId) {
+      // Configurar tipo de vínculo e IDs (aceitar snake_case ou camelCase)
+      const depId = (evento as any).departamentoId ?? (evento as any).departamento_id ?? null;
+      const orgId = (evento as any).orgaoId ?? (evento as any).orgao_id ?? null;
+      if (depId) {
         setTipoVinculo("departamento");
-        setDepartamentoId(evento.departamentoId);
+        setDepartamentoId(String(depId));
         setOrgaoId("");
-      } else if (evento.orgaoId) {
+      } else if (orgId) {
         setTipoVinculo("orgao");
-        setOrgaoId(evento.orgaoId);
+        setOrgaoId(String(orgId));
         setDepartamentoId("");
       } else {
         // Não zera os campos se já houver valores preenchidos
@@ -79,7 +81,8 @@ export function EventoModal({ aberto, onFechar, evento, dataInicial, onSalvo }: 
       setTitulo("");
       setDescricao("");
         setResponsavel("");
-      setIgrejaId(usuario?.igrejaId ?? "");
+        // garantir string
+        setIgrejaId(String(usuario?.igrejaId ?? ""));
       setRecursoId("");
       setDiaInteiro(false);
       setTipoVinculo("");
@@ -91,7 +94,7 @@ export function EventoModal({ aberto, onFechar, evento, dataInicial, onSalvo }: 
 
   // Obter igreja selecionada para pegar departamentos e órgãos
   const igrejaSelecionada = useMemo(() => 
-    igrejas.find(i => i.id === igrejaId), 
+    igrejas.find(i => String(i.id) === String(igrejaId)), 
     [igrejas, igrejaId]
   );
 
@@ -203,7 +206,7 @@ export function EventoModal({ aberto, onFechar, evento, dataInicial, onSalvo }: 
               <label className="block text-sm mb-1">Igreja</label>
               <select value={igrejaId} onChange={(e) => setIgrejaId(e.target.value)} required className="w-full rounded-md border border-input bg-background px-3 py-2">
                 <option value="" disabled>Selecione</option>
-                {igrejas.map((i) => (<option key={i.id} value={i.id}>{i.nome}</option>))}
+                {igrejas.map((i) => (<option key={i.id} value={String(i.id)}>{i.nome}</option>))}
               </select>
             </div>
             <div>
@@ -248,7 +251,7 @@ export function EventoModal({ aberto, onFechar, evento, dataInicial, onSalvo }: 
                     >
                       <option value="">Selecione...</option>
                       {igrejaSelecionada.departamentos.map((dep) => (
-                        <option key={dep.id} value={dep.id}>{dep.nome}</option>
+                        <option key={dep.id} value={String(dep.id)}>{dep.nome}</option>
                       ))}
                     </select>
                   </div>
@@ -264,7 +267,7 @@ export function EventoModal({ aberto, onFechar, evento, dataInicial, onSalvo }: 
                     >
                       <option value="">Selecione...</option>
                       {igrejaSelecionada.orgaos.map((org) => (
-                        <option key={org.id} value={org.id}>{org.nome}</option>
+                        <option key={org.id} value={String(org.id)}>{org.nome}</option>
                       ))}
                     </select>
                   </div>

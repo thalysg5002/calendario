@@ -1,0 +1,59 @@
+{
+  "appId": "com.igreja.calendario",
+  "productName": "Calendário Igreja",
+  "directories": {
+    "output": "dist-app",
+    "buildResources": "build"
+  },
+  "files": [
+    "dist/**/*",
+    "electron/**/*",
+    "data/**/*",
+    "package.json"
+  ],
+  "extraResources": [
+    {
+      "from": "dist",
+      "to": "app/dist",
+      "filter": ["**/*"]
+    },
+    {
+      "from": "data",
+      "to": "app/data",
+      "filter": ["**/*"]
+    },
+    {
+      "from": "assets/icon.png",
+      "to": "icon.png"
+    }
+  ],
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64"]
+      }
+    ],
+    "icon": "assets/icon.png",
+    "artifactName": "${productName}-${version}-Setup.${ext}"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "Calendário Igreja",
+    "installerIcon": "assets/icon.png",
+    "uninstallerIcon": "assets/icon.png"
+  },
+  "linux": {
+    "target": ["AppImage"],
+    "category": "Office",
+    "icon": "assets/icon.png"
+  },
+  "mac": {
+    "target": ["dmg"],
+    "category": "public.app-category.productivity",
+    "icon": "assets/icon.png"
+  }
+}

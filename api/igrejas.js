@@ -1,8 +1,14 @@
 // Simulação de banco de dados em memória (temporário para testes)
+// Simulação de banco de dados em memória (temporário para testes)
 let igrejas = [];
 let nextId = 1;
 
-module.exports = async (req, res) => {
+function extractId(req) {
+  const m = req.url.match(/(?:\/api)?\/igrejas\/(\d+)/);
+  return m ? Number(m[1]) : null;
+}
+
+export default async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -13,6 +19,12 @@ module.exports = async (req, res) => {
 
   try {
     if (req.method === 'GET') {
+      const id = extractId(req);
+      if (id) {
+        const found = igrejas.find(i => i.id === id);
+        if (!found) return res.status(404).json({ error: 'Igreja não encontrada' });
+        return res.status(200).json(found);
+      }
       return res.status(200).json(igrejas);
     }
 
@@ -32,7 +44,10 @@ module.exports = async (req, res) => {
     }
 
     if (req.method === 'PUT') {
-      const { id, nome, endereco, presidente, coordenador_area, coordenadora_ir } = req.body;
+      const idFromPath = extractId(req);
+      const { id: idFromBody, nome, endereco, presidente, coordenador_area, coordenadora_ir } = req.body || {};
+      const id = idFromPath || idFromBody;
+      if (!id) return res.status(400).json({ error: 'ID obrigatório para atualizar' });
       const index = igrejas.findIndex(i => i.id === id);
       if (index !== -1) {
         igrejas[index] = { ...igrejas[index], nome, endereco, presidente, coordenador_area, coordenadora_ir };
@@ -42,7 +57,10 @@ module.exports = async (req, res) => {
     }
 
     if (req.method === 'DELETE') {
-      const { id } = req.body;
+      const idFromPath = extractId(req);
+      const { id: idFromBody } = req.body || {};
+      const id = idFromPath || idFromBody;
+      if (!id) return res.status(400).json({ error: 'ID obrigatório para deletar' });
       igrejas = igrejas.filter(i => i.id !== id);
       return res.status(204).end();
     }

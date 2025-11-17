@@ -1,5 +1,5 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
 // Use process.cwd() so the function resolves the build output path in Vercel runtime
 const base = path.join(process.cwd(), 'dist', 'spa');
@@ -19,7 +19,7 @@ function contentType(file) {
   return map[ext] || 'application/octet-stream';
 }
 
-module.exports = (req, res) => {
+export default (req, res) => {
   try {
     let urlPath = req.url.split('?')[0];
     if (!urlPath || urlPath === '/') urlPath = '/index.html';

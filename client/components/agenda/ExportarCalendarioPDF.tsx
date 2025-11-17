@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { api } from "@/lib/api";
 import type { Igreja, Evento, AniversarianteOcorrencia } from "@shared/api";
 import type { Aniversario } from "@shared/api";
-import { format, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
+import { format, startOfMonth, endOfMonth, startOfYear, endOfYear, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Download } from "lucide-react";
 
@@ -18,7 +18,7 @@ interface ExportarCalendarioPDFProps {
   igrejas: Igreja[];
 }
 
-type TipoExportacao = "mensal" | "anual";
+type TipoExportacao = "mensal" | "anual" | "periodo";
 // Removido: type FormatoExportacao
 
 type RGB = [number, number, number];
@@ -57,6 +57,13 @@ function hslToRgb(h: number, s: number, l: number): RGB {
   const g = Math.round(toRgb(H) * 255);
   const b = Math.round(toRgb(H - 1 / 3) * 255);
   return [r, g, b];
+}
+
+function weekdayShort(date: Date | number) {
+  const map = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
+  const d = (typeof date === 'number') ? new Date(date) : date;
+  const wd = d.getDay();
+  return map[wd] || '';
 }
 
 function getThemeColors(): {
@@ -142,6 +149,8 @@ export function ExportarCalendarioPDF({ aberto, onFechar, igrejas }: ExportarCal
  // Removido: formato, setFormato
   const [mes, setMes] = useState(new Date().getMonth() + 1);
   const [ano, setAno] = useState(new Date().getFullYear());
+  const [periodoInicio, setPeriodoInicio] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
+  const [periodoFim, setPeriodoFim] = useState<string>(format(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'));
   const [igrejasFiltradas, setIgrejasFiltradas] = useState<string[]>([]);
   const [departamentosFiltrados, setDepartamentosFiltrados] = useState<string[]>([]);
   const [orgaosFiltrados, setOrgaosFiltrados] = useState<string[]>([]);
@@ -156,26 +165,26 @@ export function ExportarCalendarioPDF({ aberto, onFechar, igrejas }: ExportarCal
   }, [tipo]);
 
   const departamentosDisponiveis = igrejas
-    .filter((i) => igrejasFiltradas.length === 0 || igrejasFiltradas.includes(i.id))
+    .filter((i) => igrejasFiltradas.length === 0 || igrejasFiltradas.includes(String(i.id)))
     .flatMap((i) => (i.departamentos || []).map((d) => ({ ...d, igrejaId: i.id, igrejaNome: i.nome })));
 
   const orgaosDisponiveis = igrejas
-    .filter((i) => igrejasFiltradas.length === 0 || igrejasFiltradas.includes(i.id))
+    .filter((i) => igrejasFiltradas.length === 0 || igrejasFiltradas.includes(String(i.id)))
     .flatMap((i) => (i.orgaos || []).map((o) => ({ ...o, igrejaId: i.id, igrejaNome: i.nome })));
 
   async function gerarPDF() {
     setCarregando(true);
     try {
-      const dataBase = new Date(ano, mes - 1, 1);
-      const inicio = tipo === "mensal" ? startOfMonth(dataBase) : startOfYear(dataBase);
-      const fim = tipo === "mensal" ? endOfMonth(dataBase) : endOfYear(dataBase);
+      // Usar sempre período explicitado (data inicial / data final)
+      const inicio = startOfDay(new Date(periodoInicio));
+      const fim = endOfDay(new Date(periodoFim));
 
       let eventos: Evento[] = [];
       if (tipoExportacao !== 1) {
         eventos = await api.listarEventos(inicio.toISOString(), fim.toISOString());
-        if (igrejasFiltradas.length > 0) eventos = eventos.filter((e) => igrejasFiltradas.includes(e.igrejaId));
-        if (departamentosFiltrados.length > 0) eventos = eventos.filter((e) => e.departamentoId && departamentosFiltrados.includes(e.departamentoId));
-        if (orgaosFiltrados.length > 0) eventos = eventos.filter((e) => e.orgaoId && orgaosFiltrados.includes(e.orgaoId));
+        if (igrejasFiltradas.length > 0) eventos = eventos.filter((e) => igrejasFiltradas.includes(String((e as any).igrejaId ?? (e as any).igreja_id)));
+        if (departamentosFiltrados.length > 0) eventos = eventos.filter((e) => (e as any).departamentoId && departamentosFiltrados.includes(String((e as any).departamentoId)));
+        if (orgaosFiltrados.length > 0) eventos = eventos.filter((e) => (e as any).orgaoId && orgaosFiltrados.includes(String((e as any).orgaoId)));
       }
 
       let aniversarios: Aniversario[] = [];
@@ -184,9 +193,9 @@ export function ExportarCalendarioPDF({ aberto, onFechar, igrejas }: ExportarCal
         if (tipo === "mensal") {
           aniversariosCompletos = aniversariosCompletos.filter(a => a.mes === mes);
         }
-        if (igrejasFiltradas.length > 0) aniversariosCompletos = aniversariosCompletos.filter((a) => igrejasFiltradas.includes(a.igrejaId));
-        if (departamentosFiltrados.length > 0) aniversariosCompletos = aniversariosCompletos.filter((a) => a.departamentoId && departamentosFiltrados.includes(a.departamentoId));
-        if (orgaosFiltrados.length > 0) aniversariosCompletos = aniversariosCompletos.filter((a) => a.orgaoId && orgaosFiltrados.includes(a.orgaoId));
+        if (igrejasFiltradas.length > 0) aniversariosCompletos = aniversariosCompletos.filter((a) => igrejasFiltradas.includes(String((a as any).igrejaId ?? (a as any).igreja_id)));
+        if (departamentosFiltrados.length > 0) aniversariosCompletos = aniversariosCompletos.filter((a) => (a as any).departamentoId && departamentosFiltrados.includes(String((a as any).departamentoId)));
+        if (orgaosFiltrados.length > 0) aniversariosCompletos = aniversariosCompletos.filter((a) => (a as any).orgaoId && orgaosFiltrados.includes(String((a as any).orgaoId)));
         aniversarios = aniversariosCompletos;
       }
 
@@ -196,6 +205,27 @@ export function ExportarCalendarioPDF({ aberto, onFechar, igrejas }: ExportarCal
       const pageWidth = doc.internal.pageSize.width;
 
       const cores = getThemeColors();
+      // Forçar paleta do PDF para tons de verde (escuro = primary, claro = accent)
+      const pdfPalette = {
+        primary: [15, 81, 50], // verde escuro
+        primaryFg: [255, 255, 255],
+        accent: [167, 227, 167], // verde claro
+        accentFg: [20, 40, 20],
+        muted: [240, 250, 240],
+        border: [200, 230, 200],
+        card: [255, 255, 255],
+      } as const;
+
+      const coresPdf = {
+        ...cores,
+        primary: pdfPalette.primary,
+        primaryFg: pdfPalette.primaryFg,
+        accent: pdfPalette.accent,
+        accentFg: pdfPalette.accentFg,
+        muted: pdfPalette.muted,
+        border: pdfPalette.border,
+        card: pdfPalette.card,
+      } as ReturnType<typeof getThemeColors>;
       const titulo = tipo === "mensal" ? `Agenda ${format(new Date(ano, mes - 1, 1), "MMMM 'de' yyyy", { locale: ptBR })}` : `Agenda Anual ${ano}`;
 
       // Carrega logo como base64 para uso síncrono
@@ -204,7 +234,7 @@ export function ExportarCalendarioPDF({ aberto, onFechar, igrejas }: ExportarCal
         const blob = await fetch('/logo-igreja.png').then(r => r.blob());
         logoDataUrl = await new Promise<string>((res) => { const fr = new FileReader(); fr.onload = () => res(fr.result as string); fr.readAsDataURL(blob); });
       } catch {}
-      const nomeArquivo = `calendario_${tipo}_${ano}${tipo === "mensal" ? `_${String(mes).padStart(2, "00")}` : ""}.pdf`;
+      const nomeArquivo = `calendario_periodo_${periodoInicio}_a_${periodoFim}.pdf`;
       // Gera PDF com cabeçalho (inclui logo base64)
       gerarPDFListaLocal(
         doc,
@@ -215,7 +245,7 @@ export function ExportarCalendarioPDF({ aberto, onFechar, igrejas }: ExportarCal
         mes,
         ano,
         igrejas,
-        cores,
+        coresPdf,
         titulo,
         igrejasFiltradas,
         departamentosFiltrados,
@@ -256,17 +286,20 @@ export function ExportarCalendarioPDF({ aberto, onFechar, igrejas }: ExportarCal
       doc.text("Eventos", 14, yPos);
       yPos += 6;
 
-      const dadosEventos = eventos.map((e) => {
-        const igreja = igrejas.find((i) => i.id === e.igrejaId);
-        const dep = e.departamentoId && igreja?.departamentos?.find((d) => d.id === e.departamentoId);
-        const org = e.orgaoId && igreja?.orgaos?.find((o) => o.id === e.orgaoId);
+        const dadosEventos = eventos.map((e) => {
+        const igreja = igrejas.find((i) => String(i.id) === String((e as any).igrejaId ?? (e as any).igreja_id));
+        const dep = (e as any).departamentoId && igreja?.departamentos?.find((d) => String(d.id) === String((e as any).departamentoId));
+        const org = (e as any).orgaoId && igreja?.orgaos?.find((o) => String(o.id) === String((e as any).orgaoId));
+        const inicioDate = new Date((e as any).dataHoraInicio || (e as any).data_inicio);
+        const fimDate = new Date((e as any).dataHoraFim || (e as any).data_fim);
+        const dateDisplay = isNaN(inicioDate.getTime()) ? '' : `${weekdayShort(inicioDate)} ${format(inicioDate, "dd/MM/yyyy", { locale: ptBR })}`;
         return [
-          format(new Date(e.dataHoraInicio), "dd/MM/yyyy", { locale: ptBR }),
-          e.diaInteiro ? "Dia inteiro" : `${format(new Date(e.dataHoraInicio), "HH:mm")} - ${format(new Date(e.dataHoraFim), "HH:mm")}`,
+          dateDisplay,
+          (e as any).diaInteiro ? "Dia inteiro" : `${isNaN(inicioDate.getTime()) ? '' : format(inicioDate, "HH:mm")} - ${isNaN(fimDate.getTime()) ? '' : format(fimDate, "HH:mm")}`,
           e.titulo,
           igreja?.nome || "",
           dep?.nome || org?.nome || "-",
-          e.responsavel || "-",
+          (e as any).responsavel || "-",
         ];
       });
 
@@ -276,7 +309,7 @@ export function ExportarCalendarioPDF({ aberto, onFechar, igrejas }: ExportarCal
         body: dadosEventos,
         styles: { fontSize: 9, cellPadding: 3 },
         headStyles: { fillColor: cores.primary, textColor: cores.primaryFg },
-        alternateRowStyles: { fillColor: [cores.muted[0], cores.muted[1], cores.muted[2]] },
+        alternateRowStyles: { fillColor: cores.muted },
         margin: { left: 14, right: 14, top: 58 },
         didDrawPage: (data) => {
           // Cabeçalho institucional e título centralizados em todas as páginas
@@ -315,12 +348,24 @@ export function ExportarCalendarioPDF({ aberto, onFechar, igrejas }: ExportarCal
         return (hoje.getFullYear() - ano).toString();
       };
 
-      const dadosAniversarios = aniversarios
+        const dadosAniversarios = aniversarios
         .sort((a, b) => (a.mes !== b.mes ? a.mes - b.mes : a.dia - b.dia))
         .map((a) => {
-          const igreja = igrejas.find((i) => i.id === a.igrejaId);
+          const igreja = igrejas.find((i) => String(i.id) === String((a as any).igrejaId ?? (a as any).igreja_id));
+          // calcular próximo aniversário para obter dia da semana
+          let dateStr = '';
+          try {
+            if (a.dia && a.mes) {
+              const hoje = new Date();
+              let anoRef = hoje.getFullYear();
+              let dt = new Date(anoRef, a.mes - 1, a.dia);
+              if (dt < hoje) dt = new Date(anoRef + 1, a.mes - 1, a.dia);
+              dateStr = `${weekdayShort(dt)} ${String(a.dia).padStart(2, "0")}/${String(a.mes).padStart(2, "0")}`;
+            }
+          } catch (e) { dateStr = `${String(a.dia).padStart(2, "0")}/${String(a.mes).padStart(2, "0")}`; }
+
           return [
-            `${String(a.dia).padStart(2, "0")}/${String(a.mes).padStart(2, "0")}`,
+            dateStr || `${String(a.dia).padStart(2, "0")}/${String(a.mes).padStart(2, "0")}`,
             a.nome,
             igreja?.nome || "-",
             a.ano ? calcularIdade(a.ano) : "-",
@@ -334,7 +379,7 @@ export function ExportarCalendarioPDF({ aberto, onFechar, igrejas }: ExportarCal
         body: dadosAniversarios,
         styles: { fontSize: 9, cellPadding: 3 },
         headStyles: { fillColor: cores.accent, textColor: cores.accentFg },
-        alternateRowStyles: { fillColor: [255, 247, 237] },
+        alternateRowStyles: { fillColor: cores.muted },
         margin: { left: 14, right: 14, top: 58 },
         didDrawPage: (data) => {
           // Cabeçalho institucional e título centralizados em todas as páginas
@@ -732,45 +777,25 @@ export function ExportarCalendarioPDF({ aberto, onFechar, igrejas }: ExportarCal
                 <RadioGroupItem value="anual" id="anual" />
                 <Label htmlFor="anual" className="cursor-pointer">Anual</Label>
               </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="periodo" id="periodo" />
+                <Label htmlFor="periodo" className="cursor-pointer">Período</Label>
+              </div>
             </RadioGroup>
           </div>
 
           {/* Opção de formato removida, exportação será sempre em tabela/lista */}
 
-          <div className="grid grid-cols-2 gap-4">
-            {tipo === "mensal" && (
-              <div className="space-y-2">
-                <Label>Mês</Label>
-                <Select value={String(mes)} onValueChange={(v) => setMes(Number(v))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                      <SelectItem key={m} value={String(m)}>
-                        {format(new Date(2000, m - 1, 1), "MMMM", { locale: ptBR })}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+          {tipo === 'periodo' && (
             <div className="space-y-2">
-              <Label>Ano</Label>
-              <Select value={String(ano)} onValueChange={(v) => setAno(Number(v))}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 1 + i).map((a) => (
-                    <SelectItem key={a} value={String(a)}>
-                      {a}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Período</Label>
+              <div className="flex items-center gap-2">
+                <input type="date" value={periodoInicio} onChange={e => setPeriodoInicio(e.target.value)} className="rounded-md border border-input bg-background px-3 py-2 text-sm" />
+                <span className="text-sm text-muted-foreground">até</span>
+                <input type="date" value={periodoFim} onChange={e => setPeriodoFim(e.target.value)} className="rounded-md border border-input bg-background px-3 py-2 text-sm" />
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="space-y-3">
             <Label className="text-base font-semibold">Filtrar por Igreja</Label>
@@ -782,12 +807,13 @@ export function ExportarCalendarioPDF({ aberto, onFechar, igrejas }: ExportarCal
                   <div key={igreja.id} className="flex items-center space-x-2">
                     <Checkbox
                       id={`igreja-${igreja.id}`}
-                      checked={igrejasFiltradas.includes(igreja.id)}
+                      checked={igrejasFiltradas.includes(String(igreja.id))}
                       onCheckedChange={(checked) => {
+                        const sid = String(igreja.id);
                         if (checked) {
-                          setIgrejasFiltradas([...igrejasFiltradas, igreja.id]);
+                          setIgrejasFiltradas([...igrejasFiltradas, sid]);
                         } else {
-                          setIgrejasFiltradas(igrejasFiltradas.filter((id) => id !== igreja.id));
+                          setIgrejasFiltradas(igrejasFiltradas.filter((id) => id !== sid));
                         }
                       }}
                     />
@@ -805,19 +831,20 @@ export function ExportarCalendarioPDF({ aberto, onFechar, igrejas }: ExportarCal
               <Label className="text-base font-semibold">Filtrar por Departamento</Label>
               <div className="space-y-2 max-h-32 overflow-y-auto border rounded-md p-3">
                 {departamentosDisponiveis.map((dep) => (
-                  <div key={dep.id} className="flex items-center space-x-2">
+                  <div key={`${dep.igrejaId}-${dep.id}`} className="flex items-center space-x-2">
                     <Checkbox
-                      id={`dep-${dep.id}`}
-                      checked={departamentosFiltrados.includes(dep.id)}
+                      id={`dep-${dep.igrejaId}-${dep.id}`}
+                      checked={departamentosFiltrados.includes(String(dep.id))}
                       onCheckedChange={(checked) => {
+                        const sid = String(dep.id);
                         if (checked) {
-                          setDepartamentosFiltrados([...departamentosFiltrados, dep.id]);
+                          setDepartamentosFiltrados([...departamentosFiltrados, sid]);
                         } else {
-                          setDepartamentosFiltrados(departamentosFiltrados.filter((id) => id !== dep.id));
+                          setDepartamentosFiltrados(departamentosFiltrados.filter((id) => id !== sid));
                         }
                       }}
                     />
-                    <Label htmlFor={`dep-${dep.id}`} className="cursor-pointer text-sm">
+                    <Label htmlFor={`dep-${dep.igrejaId}-${dep.id}`} className="cursor-pointer text-sm">
                       {dep.nome} <span className="text-xs text-muted-foreground">({dep.igrejaNome})</span>
                     </Label>
                   </div>
@@ -831,19 +858,20 @@ export function ExportarCalendarioPDF({ aberto, onFechar, igrejas }: ExportarCal
               <Label className="text-base font-semibold">Filtrar por Órgão</Label>
               <div className="space-y-2 max-h-32 overflow-y-auto border rounded-md p-3">
                 {orgaosDisponiveis.map((org) => (
-                  <div key={org.id} className="flex items-center space-x-2">
+                  <div key={`${org.igrejaId}-${org.id}`} className="flex items-center space-x-2">
                     <Checkbox
-                      id={`org-${org.id}`}
-                      checked={orgaosFiltrados.includes(org.id)}
+                      id={`org-${org.igrejaId}-${org.id}`}
+                      checked={orgaosFiltrados.includes(String(org.id))}
                       onCheckedChange={(checked) => {
+                        const sid = String(org.id);
                         if (checked) {
-                          setOrgaosFiltrados([...orgaosFiltrados, org.id]);
+                          setOrgaosFiltrados([...orgaosFiltrados, sid]);
                         } else {
-                          setOrgaosFiltrados(orgaosFiltrados.filter((id) => id !== org.id));
+                          setOrgaosFiltrados(orgaosFiltrados.filter((id) => id !== sid));
                         }
                       }}
                     />
-                    <Label htmlFor={`org-${org.id}`} className="cursor-pointer text-sm">
+                    <Label htmlFor={`org-${org.igrejaId}-${org.id}`} className="cursor-pointer text-sm">
                       {org.nome} <span className="text-xs text-muted-foreground">({org.igrejaNome})</span>
                     </Label>
                   </div>

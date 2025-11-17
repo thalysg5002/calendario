@@ -23,7 +23,7 @@ export async function gerarRelatorioPDFMensal(ano?: number, mes?: number, igreja
     let igreja = undefined;
     if (igrejaId) {
       const igrejas = await buscarIgrejas();
-      igreja = igrejas.find(i => i.id === igrejaId);
+      igreja = igrejas.find(i => String(i.id) === String(igrejaId));
     }
     
     const pdfBlob = await gerarCalendarioMensalPDF(anoAtual, mesAtual, eventos, aniversarios, igreja);
@@ -56,7 +56,7 @@ export async function gerarRelatorioPDFAnual(ano?: number, igrejaId?: string) {
     let igreja = undefined;
     if (igrejaId) {
       const igrejas = await buscarIgrejas();
-      igreja = igrejas.find(i => i.id === igrejaId);
+      igreja = igrejas.find(i => String(i.id) === String(igrejaId));
     }
     
     const pdfBlob = await gerarCalendarioAnualPDF(anoAtual, eventos, aniversarios, igreja);
@@ -84,7 +84,7 @@ export async function gerarRelatorioPDF(igrejaId?: string) {
     let igreja = undefined;
     if (igrejaId) {
       const igrejas = await buscarIgrejas();
-      igreja = igrejas.find(i => i.id === igrejaId);
+      igreja = igrejas.find(i => String(i.id) === String(igrejaId));
     }
     
     const pdfBlob = await gerarRelatorioAniversariosPDF(aniversarios, igreja);

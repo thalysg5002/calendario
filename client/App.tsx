@@ -12,6 +12,8 @@ import NotFound from "./pages/NotFound";
 import Admin from "./pages/Admin";
 import GerenciarAniversarios from "./pages/GerenciarAniversarios";
 import { ProvedorAuth, useAuth } from "@/hooks/use-auth";
+import { autoBackup } from './lib/local-storage';
+import { useEffect } from 'react';
 
 const queryClient = new QueryClient();
 
@@ -76,6 +78,11 @@ function Layout({ children }: { children: React.ReactNode }) {
 }
 
 function AppContent() {
+  useEffect(() => {
+    // Executa backup automático no primeiro carregamento (silencioso)
+    // Não solicitar download por padrão (download pode ser bloqueado)
+    try { autoBackup({ download: false }); } catch (e) { /* noop */ }
+  }, []);
   return (
     <BrowserRouter>
       <Routes>
