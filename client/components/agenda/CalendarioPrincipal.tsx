@@ -13,6 +13,7 @@ import { LembretesAniversarios } from "./LembretesAniversarios";
 import { ExportarCalendarioPDF } from "./ExportarCalendarioPDF";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { FileDown, Plus, Download, Upload } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { exportAllData, importData } from "@/lib/local-storage";
 import { useToast } from "@/hooks/use-toast";
 
@@ -298,43 +299,43 @@ export default function CalendarioPrincipal() {
         onChange={handleArquivoSelecionado}
         className="hidden"
       />
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
         <div className="space-y-0.5">
-          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">{titulo}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{titulo}</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Tooltip>
             <TooltipTrigger asChild>
-              <button onClick={handleExportarDados} className="btn-premium bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-xs sm:text-sm">
-                <Download className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Exportar Dados</span>
-              </button>
+              <Button onClick={handleExportarDados} className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800">
+                <Download className="h-4 w-4 mr-2 inline" />
+                Exportar Dados
+              </Button>
             </TooltipTrigger>
             <TooltipContent>
               <p>Exportar todos os dados (igrejas, eventos, aniversários)</p>
             </TooltipContent>
           </Tooltip>
-          
+
           <Tooltip>
             <TooltipTrigger asChild>
-              <button onClick={handleImportarDados} className="btn-premium bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-xs sm:text-sm">
-                <Upload className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Importar Dados</span>
-              </button>
+              <Button onClick={handleImportarDados} className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800">
+                <Upload className="h-4 w-4 mr-2 inline" />
+                Importar Dados
+              </Button>
             </TooltipTrigger>
             <TooltipContent>
               <p>Importar dados de um arquivo JSON</p>
             </TooltipContent>
           </Tooltip>
-          
-          <button onClick={() => setModalExportarPDF(true)} className="btn-premium bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-xs sm:text-sm">
-            <FileDown className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Exportar PDF</span>
-          </button>
+
+          <Button onClick={() => setModalExportarPDF(true)} className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800">
+            <FileDown className="h-4 w-4 mr-2 inline" />
+            Exportar PDF
+          </Button>
           {/* botão 'Nova Igreja' removido — usar o + ao lado do título 'Igrejas' */}
           <>
-            <button onClick={() => abrirCriacaoNaData(new Date())} className="btn-premium text-xs sm:text-sm"><span className="hidden sm:inline">Adicionar Atividade</span><span className="sm:hidden">+ Ativ.</span></button>
-            <button onClick={() => setModalAniversario(true)} className="btn-premium text-xs sm:text-sm"><span className="hidden sm:inline">Adicionar Aniversário</span><span className="sm:hidden">+ Aniv.</span></button>
+            <Button onClick={() => abrirCriacaoNaData(new Date())}>Adicionar Atividade</Button>
+            <Button onClick={() => setModalAniversario(true)}>Adicionar Aniversário</Button>
           </>
         </div>
       </div>
@@ -342,16 +343,16 @@ export default function CalendarioPrincipal() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         <div className="lg:col-span-3">
           <div ref={calendarioRef} className="gradient-border rounded-2xl bg-card/85 p-4 shadow-xl ring-1 ring-black/5 backdrop-blur-md overflow-hidden transition-colors">
-            <div className="flex flex-wrap items-center gap-2 sm:gap-4 px-2 pb-3">
+            <div className="flex items-center gap-4 px-2 pb-3">
               <div className="btn-nav-cal-group">
-                <button onClick={irHoje} className="btn-nav-cal text-xs sm:text-sm" aria-label="Ir para hoje">Hoje</button>
-                <button onClick={irAnterior} className="btn-nav-cal text-xs sm:text-sm" aria-label="Anterior"><span className="hidden sm:inline">Anterior</span><span className="sm:hidden">&lt;</span></button>
-                <button onClick={irProximo} className="btn-nav-cal text-xs sm:text-sm" aria-label="Próximo"><span className="hidden sm:inline">Próximo</span><span className="sm:hidden">&gt;</span></button>
+                <button onClick={irHoje} className="btn-nav-cal" aria-label="Ir para hoje">Hoje</button>
+                <button onClick={irAnterior} className="btn-nav-cal" aria-label="Anterior">Anterior</button>
+                <button onClick={irProximo} className="btn-nav-cal" aria-label="Próximo">Próximo</button>
               </div>
-              <h2 className="flex-1 text-center text-sm sm:text-lg font-semibold capitalize tracking-tight">{rotuloCentro}</h2>
+              <h2 className="flex-1 text-center text-lg font-semibold capitalize tracking-tight">{rotuloCentro}</h2>
               <div className="flex items-center gap-2">
-                <button onClick={() => setModo('mes')} className={`px-2 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm border transition ${modo==='mes' ? 'bg-primary text-primary-foreground border-primary/50 shadow' : 'bg-secondary hover:bg-secondary/80 border-border'}`}>Mês</button>
-                <button onClick={() => setModo('anual')} className={`px-2 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm border transition ${modo==='anual' ? 'bg-primary text-primary-foreground border-primary/50 shadow' : 'bg-secondary hover:bg-secondary/80 border-border'}`}>Anual</button>
+                <button onClick={() => setModo('mes')} className={`px-3 py-1.5 rounded-md text-sm border transition ${modo==='mes' ? 'bg-primary text-primary-foreground border-primary/50 shadow' : 'bg-secondary hover:bg-secondary/80 border-border'}`}>Mês</button>
+                <button onClick={() => setModo('anual')} className={`px-3 py-1.5 rounded-md text-sm border transition ${modo==='anual' ? 'bg-primary text-primary-foreground border-primary/50 shadow' : 'bg-secondary hover:bg-secondary/80 border-border'}`}>Anual</button>
               </div>
             </div>
             {modo === 'mes' ? (
@@ -363,7 +364,7 @@ export default function CalendarioPrincipal() {
                 events={eventosRbc}
                 startAccessor="start"
                 endAccessor="end"
-                style={{ minHeight: Math.min(680 + Math.max(0, maxEventosEmUmDia - 2) * 48, window.innerWidth < 768 ? 450 : 680) }}
+                style={{ minHeight: 680 + Math.max(0, maxEventosEmUmDia - 2) * 48 }}
                 views={[Views.MONTH]}
                 messages={{ month: "Mês", week: "Semana", day: "Dia", today: "Hoje", previous: "Anterior", next: "Próximo", noEventsInRange: "Sem eventos" }}
                 toolbar={false}
