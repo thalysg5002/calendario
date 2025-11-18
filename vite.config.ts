@@ -16,6 +16,8 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     outDir: "dist",
+    // Use relative paths so the built files work when loaded from file:// (Electron production)
+    base: './',
   },
   plugins: [react(), expressPlugin()],
   resolve: {
