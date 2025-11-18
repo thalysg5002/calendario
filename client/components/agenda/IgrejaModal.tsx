@@ -29,6 +29,8 @@ export function IgrejaModal({
   const [codigoCor, setCodigoCor] = useState("#16a34a");
   const [orgaos, setOrgaos] = useState<string[]>([]);
   const [novoOrgao, setNovoOrgao] = useState("");
+  const [orgaoEditIndex, setOrgaoEditIndex] = useState<number | null>(null);
+  const [orgaoEditValue, setOrgaoEditValue] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
 
@@ -200,14 +202,52 @@ export function IgrejaModal({
                 <div className="border border-border rounded-md p-2 space-y-1">
                   {orgaos.map((orgao, idx) => (
                     <div key={idx} className="flex items-center justify-between bg-muted px-2 py-1 rounded text-sm">
-                      <span>{orgao}</span>
-                      <button
-                        type="button"
-                        onClick={() => removerOrgao(orgao)}
-                        className="text-destructive hover:text-destructive/80"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
+                      {orgaoEditIndex === idx ? (
+                        <div className="flex items-center gap-2 w-full">
+                          <input
+                            className="flex-1 rounded-md border border-input bg-background px-2 py-1 text-sm"
+                            value={orgaoEditValue}
+                            onChange={(e) => setOrgaoEditValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                const v = orgaoEditValue.trim();
+                                if (v) {
+                                  const next = [...orgaos];
+                                  next[idx] = v;
+                                  setOrgaos(next);
+                                }
+                                setOrgaoEditIndex(null);
+                              }
+                              if (e.key === 'Escape') { setOrgaoEditIndex(null); }
+                            }}
+                          />
+                          <button type="button" onClick={() => { const v = orgaoEditValue.trim(); if (v) { const next = [...orgaos]; next[idx] = v; setOrgaos(next); } setOrgaoEditIndex(null); }} className="px-2 py-1 bg-primary text-primary-foreground rounded">Salvar</button>
+                          <button type="button" onClick={() => setOrgaoEditIndex(null)} className="px-2 py-1 rounded">Cancelar</button>
+                        </div>
+                      ) : (
+                        <>
+                          <span className="flex-1">{orgao}</span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => { setOrgaoEditIndex(idx); setOrgaoEditValue(orgao); }}
+                              className="text-primary hover:text-primary/90 mr-2"
+                              title="Editar órgão"
+                            >
+                              ✏️
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removerOrgao(orgao)}
+                              className="text-destructive hover:text-destructive/80"
+                              title="Remover órgão"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   ))}
                 </div>

@@ -127,12 +127,45 @@ export const igrejasAPI = {
     // Se orgaos estiver presente como array de strings, normalizar para objetos com id estável
     const updateData: any = { ...data };
     if (Array.isArray((data as any).orgaos)) {
-      updateData.orgaos = (data as any).orgaos.map((o: any) => {
+      const normalizedNewOrgaos = (data as any).orgaos.map((o: any) => {
         if (!o) return null;
         if (typeof o === 'string') return { id: `${id}-${slugify(o)}`, nome: o };
         if (typeof o === 'object' && (o.id || o.nome)) return { id: String(o.id ?? `${id}-${slugify(o.nome ?? String(o))}`), nome: o.nome ?? String(o) };
         return null;
       }).filter((x: any) => x !== null);
+      updateData.orgaos = normalizedNewOrgaos;
+
+      // Se houve mudanças nos nomes/ids dos órgãos, atualizar eventos que referenciam orgaoId
+      try {
+        const eventos = loadFromStorage<Evento>('eventos');
+        const igrejaAtual = igrejas[index];
+        const oldOrgaos: Array<{id: string; nome: string}> = (igrejaAtual.orgaos || []).map(o => ({ id: String((o as any).id), nome: (o as any).nome }));
+        const newOrgaos: Array<{id: string; nome: string}> = normalizedNewOrgaos.map((o: any) => ({ id: String(o.id), nome: o.nome }));
+
+        let changed = false;
+        const updatedEventos = eventos.map(ev => {
+          const evOrgaoId = (ev as any).orgaoId || (ev as any).orgao_id || null;
+          if (!evOrgaoId) return ev;
+          // if event references an old orgao id, try to map to new id by matching name
+          const oldMatch = oldOrgaos.find(o => String(o.id) === String(evOrgaoId));
+          if (!oldMatch) return ev;
+          const newMatch = newOrgaos.find(o => o.nome === oldMatch.nome);
+          if (newMatch) {
+            if (String(evOrgaoId) !== String(newMatch.id)) {
+              changed = true;
+              return { ...ev, orgaoId: newMatch.id, orgao_id: newMatch.id } as Evento;
+            }
+          } else {
+            // órgão foi removido or renamed without matching — clear link
+            changed = true;
+            return { ...ev, orgaoId: null, orgao_id: null } as Evento;
+          }
+          return ev;
+        });
+        if (changed) saveToStorage('eventos', updatedEventos);
+      } catch (e) {
+        // ignore event update failures
+      }
     }
 
     igrejas[index] = { ...igrejas[index], ...updateData };
