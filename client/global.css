@@ -99,6 +99,79 @@
 }
 .glow { animation: glow 3s ease-in-out infinite; }
 
+/* ==== RESPONSIVIDADE MOBILE ==== */
+@media (max-width: 768px) {
+  .rbc-month-view {
+    min-height: 400px !important;
+    font-size: 11px;
+  }
+  .rbc-header {
+    padding: 4px 2px !important;
+    font-size: 10px !important;
+  }
+  .rbc-date-cell {
+    padding: 2px !important;
+    font-size: 11px !important;
+  }
+  .rbc-event {
+    padding: 2px 4px !important;
+    font-size: 10px !important;
+  }
+  .rbc-toolbar {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .btn-premium {
+    padding: 10px 16px;
+    font-size: 14px;
+    min-height: 44px;
+  }
+  .btn-nav-cal {
+    padding: 8px 12px;
+    font-size: 13px;
+    min-height: 40px;
+  }
+  [role="dialog"] {
+    max-width: 95vw !important;
+    max-height: 90vh !important;
+  }
+  .grid-cols-1.lg\:grid-cols-4 {
+    grid-template-columns: 1fr;
+  }
+  .rounded-2xl.border {
+    padding: 12px;
+  }
+  h1 {
+    font-size: 1.5rem !important;
+  }
+  h2 {
+    font-size: 1.25rem !important;
+  }
+  input, select, textarea {
+    min-height: 44px;
+    font-size: 16px;
+  }
+  .grid.md\:grid-cols-2.xl\:grid-cols-3 {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .rbc-month-view {
+    min-height: 350px !important;
+    font-size: 10px;
+  }
+  .rbc-header {
+    font-size: 9px !important;
+  }
+  .rbc-event {
+    font-size: 9px !important;
+  }
+  .hidden-xs {
+    display: none !important;
+  }
+}
+
 @layer base {
   /**
    * Tailwind CSS theme

@@ -76,25 +76,39 @@ function getThemeColors(): {
   border: RGB;
   card: RGB;
 } {
-  const css = getComputedStyle(document.documentElement);
-  const p = parseCssHslTriplet(css.getPropertyValue("--primary"));
-  const pf = parseCssHslTriplet(css.getPropertyValue("--primary-foreground"));
-  const a = parseCssHslTriplet(css.getPropertyValue("--accent"));
-  const af = parseCssHslTriplet(css.getPropertyValue("--accent-foreground"));
-  const fg = parseCssHslTriplet(css.getPropertyValue("--foreground"));
-  const mu = parseCssHslTriplet(css.getPropertyValue("--muted"));
-  const bd = parseCssHslTriplet(css.getPropertyValue("--border"));
-  const cd = parseCssHslTriplet(css.getPropertyValue("--card"));
-  return {
-    primary: p ? hslToRgb(p.h, p.s, p.l) : [102, 126, 234],
-    primaryFg: pf ? hslToRgb(pf.h, pf.s, pf.l) : [255, 255, 255],
-    accent: a ? hslToRgb(a.h, a.s, a.l) : [249, 115, 22],
-    accentFg: af ? hslToRgb(af.h, af.s, af.l) : [255, 255, 255],
-    foreground: fg ? hslToRgb(fg.h, fg.s, fg.l) : [31, 41, 55],
-    muted: mu ? hslToRgb(mu.h, mu.s, mu.l) : [243, 244, 246],
-    border: bd ? hslToRgb(bd.h, bd.s, bd.l) : [229, 231, 235],
-    card: cd ? hslToRgb(cd.h, cd.s, cd.l) : [255, 255, 255],
-  };
+  try {
+    const css = getComputedStyle(document.documentElement);
+    const p = parseCssHslTriplet(css.getPropertyValue("--primary"));
+    const pf = parseCssHslTriplet(css.getPropertyValue("--primary-foreground"));
+    const a = parseCssHslTriplet(css.getPropertyValue("--accent"));
+    const af = parseCssHslTriplet(css.getPropertyValue("--accent-foreground"));
+    const fg = parseCssHslTriplet(css.getPropertyValue("--foreground"));
+    const mu = parseCssHslTriplet(css.getPropertyValue("--muted"));
+    const bd = parseCssHslTriplet(css.getPropertyValue("--border"));
+    const cd = parseCssHslTriplet(css.getPropertyValue("--card"));
+    return {
+      primary: p ? hslToRgb(p.h, p.s, p.l) : [102, 126, 234],
+      primaryFg: pf ? hslToRgb(pf.h, pf.s, pf.l) : [255, 255, 255],
+      accent: a ? hslToRgb(a.h, a.s, a.l) : [249, 115, 22],
+      accentFg: af ? hslToRgb(af.h, af.s, af.l) : [255, 255, 255],
+      foreground: fg ? hslToRgb(fg.h, fg.s, fg.l) : [31, 41, 55],
+      muted: mu ? hslToRgb(mu.h, mu.s, mu.l) : [243, 244, 246],
+      border: bd ? hslToRgb(bd.h, bd.s, bd.l) : [229, 231, 235],
+      card: cd ? hslToRgb(cd.h, cd.s, cd.l) : [255, 255, 255],
+    };
+  } catch (error) {
+    console.warn('getThemeColors fallback:', error);
+    return {
+      primary: [102, 126, 234],
+      primaryFg: [255, 255, 255],
+      accent: [249, 115, 22],
+      accentFg: [255, 255, 255],
+      foreground: [31, 41, 55],
+      muted: [243, 244, 246],
+      border: [229, 231, 235],
+      card: [255, 255, 255],
+    };
+  }
 }
 
 
@@ -201,7 +215,19 @@ export function ExportarCalendarioPDF({ aberto, onFechar, igrejas }: ExportarCal
 
       const { default: jsPDF } = await import("jspdf");
       const autoTable = (await import("jspdf-autotable")).default as any;
-    const doc = new jsPDF({ orientation: "portrait" });
+      const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+        compress: true
+      });
+      
+      try {
+        doc.setFont("helvetica");
+      } catch (error) {
+        console.warn('Fonte não disponível:', error);
+      }
+      
       const pageWidth = doc.internal.pageSize.width;
 
       const cores = getThemeColors();
@@ -755,7 +781,7 @@ export function ExportarCalendarioPDF({ aberto, onFechar, igrejas }: ExportarCal
 
   return (
     <Dialog open={aberto} onOpenChange={onFechar}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             Exportar Calendário em PDF
@@ -767,7 +793,7 @@ export function ExportarCalendarioPDF({ aberto, onFechar, igrejas }: ExportarCal
 
         <div className="space-y-6 py-4">
           <div className="space-y-3">
-            <Label className="text-base font-semibold">Período</Label>
+            <Label className="text-sm sm:text-base font-semibold">Período</Label>
             <RadioGroup value={tipo} onValueChange={(v) => setTipo(v as TipoExportacao)}>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="mensal" id="mensal" />
@@ -788,18 +814,18 @@ export function ExportarCalendarioPDF({ aberto, onFechar, igrejas }: ExportarCal
 
           {tipo === 'periodo' && (
             <div className="space-y-2">
-              <Label>Período</Label>
-              <div className="flex items-center gap-2">
-                <input type="date" value={periodoInicio} onChange={e => setPeriodoInicio(e.target.value)} className="rounded-md border border-input bg-background px-3 py-2 text-sm" />
+              <Label className="text-sm sm:text-base">Período</Label>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                <input type="date" value={periodoInicio} onChange={e => setPeriodoInicio(e.target.value)} className="rounded-md border border-input bg-background px-3 py-2 text-sm w-full sm:w-auto" />
                 <span className="text-sm text-muted-foreground">até</span>
-                <input type="date" value={periodoFim} onChange={e => setPeriodoFim(e.target.value)} className="rounded-md border border-input bg-background px-3 py-2 text-sm" />
+                <input type="date" value={periodoFim} onChange={e => setPeriodoFim(e.target.value)} className="rounded-md border border-input bg-background px-3 py-2 text-sm w-full sm:w-auto" />
               </div>
             </div>
           )}
 
           <div className="space-y-3">
-            <Label className="text-base font-semibold">Filtrar por Igreja</Label>
-            <div className="space-y-2 max-h-32 overflow-y-auto border rounded-md p-3">
+            <Label className="text-sm sm:text-base font-semibold">Filtrar por Igreja</Label>
+            <div className="space-y-2 max-h-32 overflow-y-auto border rounded-md p-2 sm:p-3">
               {igrejas.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Nenhuma igreja cadastrada</p>
               ) : (
@@ -908,11 +934,11 @@ export function ExportarCalendarioPDF({ aberto, onFechar, igrejas }: ExportarCal
           </div>
         </div>
 
-        <div className="flex justify-end gap-3">
-          <Button variant="outline" onClick={onFechar} disabled={carregando}>
+        <div className="flex flex-col-reverse sm:flex-row justify-end gap-3">
+          <Button variant="outline" onClick={onFechar} disabled={carregando} className="w-full sm:w-auto">
             Cancelar
           </Button>
-          <Button onClick={gerarPDF} disabled={carregando}>
+          <Button onClick={gerarPDF} disabled={carregando} className="w-full sm:w-auto">
             {carregando ? (
               <>
                 Gerando PDF...
