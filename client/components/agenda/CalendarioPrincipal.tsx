@@ -306,7 +306,7 @@ export default function CalendarioPrincipal() {
         <div className="flex flex-wrap items-center gap-2">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button onClick={handleExportarDados} className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800">
+              <Button onClick={handleExportarDados}>
                 <Download className="h-4 w-4 mr-2 inline" />
                 Exportar Dados
               </Button>
@@ -318,7 +318,7 @@ export default function CalendarioPrincipal() {
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button onClick={handleImportarDados} className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800">
+              <Button onClick={handleImportarDados}>
                 <Upload className="h-4 w-4 mr-2 inline" />
                 Importar Dados
               </Button>
@@ -328,7 +328,7 @@ export default function CalendarioPrincipal() {
             </TooltipContent>
           </Tooltip>
 
-          <Button onClick={() => setModalExportarPDF(true)} className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800">
+          <Button onClick={() => setModalExportarPDF(true)}>
             <FileDown className="h-4 w-4 mr-2 inline" />
             Exportar PDF
           </Button>
