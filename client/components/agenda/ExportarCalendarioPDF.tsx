@@ -60,7 +60,8 @@ function hslToRgb(h: number, s: number, l: number): RGB {
 }
 
 function weekdayShort(date: Date | number) {
-  const map = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
+  // Primeira letra maiúscula e ponto final, em pt-BR
+  const map = ['Dom.', 'Seg.', 'Ter.', 'Qua.', 'Qui.', 'Sex.', 'Sáb.'];
   const d = (typeof date === 'number') ? new Date(date) : date;
   const wd = d.getDay();
   return map[wd] || '';
@@ -175,9 +176,21 @@ export function ExportarCalendarioPDF({ aberto, onFechar, igrejas }: ExportarCal
   async function gerarPDF() {
     setCarregando(true);
     try {
-      // Usar sempre período explicitado (data inicial / data final)
-      const inicio = startOfDay(new Date(periodoInicio));
-      const fim = endOfDay(new Date(periodoFim));
+      // Determinar período de exportação conforme tipo selecionado
+      let inicio: Date;
+      let fim: Date;
+      if (tipo === 'mensal') {
+        // do início do mês até o final do mês (inclui datas anteriores ao dia atual)
+        inicio = startOfDay(startOfMonth(new Date(ano, mes - 1, 1)));
+        fim = endOfDay(endOfMonth(new Date(ano, mes - 1, 1)));
+      } else if (tipo === 'anual') {
+        inicio = startOfDay(startOfYear(new Date(ano, 0, 1)));
+        fim = endOfDay(endOfYear(new Date(ano, 0, 1)));
+      } else {
+        // período manual informado pelo usuário
+        inicio = startOfDay(new Date(periodoInicio));
+        fim = endOfDay(new Date(periodoFim));
+      }
 
       let eventos: Evento[] = [];
       if (tipoExportacao !== 1) {
